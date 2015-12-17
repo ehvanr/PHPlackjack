@@ -104,6 +104,9 @@ function CreateGame($GameName, $Username){
     // Gets the GameID (Last inserted ID)
     $GameID = DBGetLastInsertID();
 
+    // Store GameID in SESSION
+    $_SESSION["GameID"] = $GameID;
+
     // Shuffles the deck in the game
     ShuffleDeck($GameID);
 
@@ -115,7 +118,7 @@ function CreateGame($GameName, $Username){
 
     // DEAL OUT
     // Get number of players + dealer
-    $GameUsers = DBGetGameUsers($GameID);
+    $GameUsers = DBGetGameUsers($GameID, "ACTIVE");
     $DealerHand = DBGetDealerHand($GameID);
     $Deck = DBGetGameDeck($GameID);
     $DeckPointer = $Deck[0]->DeckPointer;
@@ -123,11 +126,13 @@ function CreateGame($GameName, $Username){
     // Loop twice (two cards deal out)
     for($i = 0; $i < 2; $i++){
         // Deal out to dealer
-        $DealerHand .= $DeckPointer;
+        $ZeroPadCard = sprintf("%02d", $DeckPointer);
+        $DealerHand .= $ZeroPadCard;
         $DeckPointer++;
 
         foreach($GameUsers as $User){
-            $User->UserHand .= $DeckPointer;
+            $ZeroPadCard = sprintf("%02d", $DeckPointer);
+            $User->UserHand .= $ZeroPadCard;
             $DeckPointer++;
         }
     }
@@ -141,15 +146,97 @@ function CreateGame($GameName, $Username){
 
     DBUpdateDealerHand($GameID, $DealerHand);
 
-    echo "UserHand: " . $GameUsers[0]->UserHand;
-    echo "\nDealerHand: " . $DealerHand . "\n";
+    // Set UserTurn in Games to Username
+    $Username = $_SESSION["Username"];
+    DBSetUserTurn($Username, $GameID);
 
     // Update User Board with the appropriate card mappings
+    UpdateBoard();
+}
+
+function UpdateBoard(){
+    // Get all user hands
+    $GameID = $_SESSION["GameID"];
+    $CurrentDeckString = DBGetGameDeck($GameID)[0]->CurrentDeck;
+    $CurrentDeckArr = str_split($CurrentDeckString, 2);
+    $UserTurn = DBGetUserTurn($GameID);
+    $GameUsers = DBGetGameUsers($GameID, "ACTIVE");
+
+    $_SESSION["UserTurn"] = $UserTurn;
+    echo "UserTurn: " . $UserTurn . "\n";
+
+    foreach($GameUsers as $User){
+        $CurrentUsername = $User->Username;
+        $CardIndexStr = $User->UserHand;
+        $CardIndexArr = str_split($CardIndexStr, 2);
+
+        echo $CurrentUsername . " Cards: ";
+        foreach($CardIndexArr as $CardIndex){
+            // convert to int
+            $UnpaddedCardIndex = intval($CardIndex);
+            echo $CurrentDeckArr[$UnpaddedCardIndex] . " ";
+        }
+        echo "\n";
+    }
+
+    // Dealer Hand
+    $DealerCardIndexStr = DBGetDealerHand($GameID);
+    $DealerCardIndexArr = str_split($DealerCardIndexStr, 2);
+    echo "Dealer Cards: ";
+    foreach($DealerCardIndexArr as $CardIndex){
+        // convert to int
+        $UnpaddedCardIndex = intval($CardIndex);
+        echo $CurrentDeckArr[$UnpaddedCardIndex] . " ";
+    }
+    echo "\n";
+    
+    // User resumes 2s check in
+}
+
+function AddUserToGame($GameID, $Username){
+    DBAddUserToGame($GameID, $Username);   
+    // USER IS WAITING
+}
+
+function RemoveUserFromGame(){
+    // Need to check if active user and fold and further move to next user if so
 }
 
 function NewHand($GameID){
+    $WaitingGameUsers = DBGetGameUsers($GameID, "WAITING");
+    $LeftGameUsers = DBGetGameUsers($GameID, "LEFT");
+
+    foreach($WaitingGameUsers as $User){
+        $Username = $User->Username;
+        DBUpdateUserGameStatus($GameID, $Username, "ACTIVE");
+    }
+
+    foreach($LeftGameUsers as $User){
+        $Username = $User->Username;
+        //DBRemoveUserFromGame();
+    }
+    // Set waiting users to active
+    // Remove Left Users
+    
     // Get GameUsers, see if any are WAITING or  LEFT, set to ACTIVE or remove item in GameUsers
     // Shuffle Deck 
+}
+
+function IsUserTurn($Username, $GameID){
+    // Compare $_SESSION["UserTurn"] with DB UserTurn (Query every two seconds)
+    $GameID = $_SESSION["GameID"];
+    $LastUserTurn = $_SESSION["UserTurn"];
+    $CurrentUserTurn = DBGetUserTurn($GameID);
+
+    if($LastUserTurn !== $CurrentUserTurn){
+        // New user, update board
+        $_SESSION["UserTurn"] = $CurrentUserTurn;
+        UpdateBoard();
+    }
+
+    if($_SESSION["UserTurn"] === $_SESSION["Username"]){
+        // It is our turn, update controls to allow and give ability to fold / stay / hit
+    }
 }
 
 function HitPlayer($Username, $GameID){
@@ -157,22 +244,26 @@ function HitPlayer($Username, $GameID){
     // Update DB with new card
     // Determine of bust
     //   If so IncremenetHandsLost(UserID)
-}
-
-function IsUserTurn($Username, $GameID){
-
+    // Update UserTurn
+    UpdateUserTurn();
 }
 
 function FoldPlayer($Username){
-
+    // Update UserTurn
+    UpdateUserTurn();
 }
 
-function UpdateBoard($Username, $GameID){
-    // Return board layout
+function StayPlayer(){
+    // Update UserTurn
+    UpdateUserTurn();
 }
 
-function CheckIn($GameID){
-    
+function UpdateUserTurn(){
+    // Increment, if no user, dealers turn, in which case do dealer, calc results, execute NewHand()
+}
+
+function ResetEntireDatabase(){
+    // Reset DB to default (call delete methods in proper order)
 }
 
 ?>

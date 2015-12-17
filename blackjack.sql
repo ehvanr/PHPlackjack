@@ -8,20 +8,22 @@ DROP TABLE IF EXISTS `GameUsers`;
 DROP TABLE IF EXISTS `ChatHistory`;
 DROP TABLE IF EXISTS `Leaderboard`;
 
+CREATE TABLE `Users` (
+  `Username` varchar(255) NOT NULL,
+  `Password` varchar(255) NOT NULL,
+  `Token` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`Username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `Games` (
   `GameID` int(12) NOT NULL AUTO_INCREMENT,
   `GameName` varchar(255) NOT NULL,
   `DealerHand` varchar(255) DEFAULT NULL,
   `DeckPointer` int(12) DEFAULT NULL,
   `CurrentDeck` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`GameID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-CREATE TABLE `Users` (
-  `Username` varchar(255) NOT NULL,
-  `Password` varchar(255) NOT NULL,
-  `Token` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`Username`)
+  `UserTurn` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`GameID`),
+  CONSTRAINT `games_ibfk_1` FOREIGN KEY (`UserTurn`) REFERENCES `Users` (`Username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `GameUsers` (

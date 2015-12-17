@@ -369,6 +369,70 @@ function DBUpdateGameDeck($GameID, $NewDeck){
     }
 }
 
+// I wanna cry
+// SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE ID = ?;
+
+function DBGetUserGameIndex($Username, $GameID){
+    $sql = "SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE Username = ? AND GameID = ?";
+    $param_type_array = array("si");
+    $param_array = array($Username, $GameID);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
+
+    if($return === FAILURE){
+        return FAILURE;
+    }else{
+        $ID = json_decode($return)[0]->ID;
+        return $ID;
+    }
+}
+
+function DBGetUserGameUsernameByIndex($Index, $GameID){
+    $sql = "SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE ID = ? AND GameID = ?";
+    $param_type_array = array("ii");
+    $param_array = array($Index, $GameID);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
+
+    if($return === FAILURE){
+        return FAILURE;
+    }else{
+        $Username = json_decode($return)[0]->Username;
+        return $Username;
+    }
+}
+
+function DBSetUserTurn($Username, $GameID){
+    $sql = "UPDATE Games SET UserTurn = ? WHERE GameID = ?";
+    $param_type_array = array("si");
+    $param_array = array($Username, $GameID);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_UPDATE);
+
+    switch($return){
+        case SUCCESS:
+        case NOTHING_AFFECTED:
+            return SUCCESS;
+            break;
+        case FAILURE:
+            return FAILURE;
+        default:
+            return FAILURE;
+            break;
+    }
+}
+
+function DBGetUserTurn($GameID){
+    $sql = "SELECT UserTurn FROM Games WHERE GameID = ?";
+    $param_type_array = array("i");
+    $param_array = array($GameID);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
+
+    if($return === FAILURE){
+        return FAILURE;
+    }else{
+        $user_turn = json_decode($return)[0]->UserTurn;
+        return $user_turn;
+    }
+}
+
 // FINISHED
 function DBGetGameDeck($GameID){
     $sql = "SELECT CurrentDeck, DeckPointer FROM Games WHERE GameID = ?";
@@ -420,10 +484,10 @@ function DBUpdateDealerHand($GameID, $DealerHand){
 }
 
 // FINISHED
-function DBGetGameUsers($GameID){
-    $sql = "SELECT * FROM GameUsers WHERE GameID = ?";
-    $param_type_array = array("i");
-    $param_array = array($GameID);
+function DBGetGameUsers($GameID, $UserStatus){
+    $sql = "SELECT * FROM GameUsers WHERE GameID = ? AND UserStatus = ?";
+    $param_type_array = array("is");
+    $param_array = array($GameID, $UserStatus);
     $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
 
     if($return === FAILURE){
