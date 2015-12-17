@@ -145,6 +145,9 @@ function CreateGame($GameName, $Username){
     }
 
     DBUpdateDealerHand($GameID, $DealerHand);
+    
+    // Update DeckPointer
+    DBUpdateDeckPointer($GameID, $DeckPointer);
 
     // Set UserTurn in Games to Username
     $Username = $_SESSION["Username"];
@@ -239,13 +242,23 @@ function IsUserTurn($Username, $GameID){
     }
 }
 
-function HitPlayer($Username, $GameID){
+function HitPlayer($Username){
     // Hit player with next card.
+
+    $GameID = $_SESSION["GameID"];
+    $UserHand = DBGetUserHand($GameID, $Username);
+    $Deck = DBGetGameDeck($GameID);
+    $DeckPointer = $Deck[0]->DeckPointer;
+
+    $ZeroPadCard = sprintf("%02d", $DeckPointer);
+    $UserHand .= $ZeroPadCard;
+    $DeckPointer++;
+
+    DBUpdateUserHand($GameID, $Username, $UserHand);
+    
     // Update DB with new card
     // Determine of bust
     //   If so IncremenetHandsLost(UserID)
-    // Update UserTurn
-    UpdateUserTurn();
 }
 
 function FoldPlayer($Username){
@@ -258,12 +271,31 @@ function StayPlayer(){
     UpdateUserTurn();
 }
 
+function CheckIfBust(){
+    $UserHand = DBGetUserHand($GameID, $Username);
+    var_dump($UserHand);
+    // If bust, Update UserTurn, update HandsLost
+}
+
+function DealerPlay(){
+    // Dealer play rules
+    // Hit if < 17, stay on 17+
+}
+
+function CheckWinners(){
+    // Cycle through all hands, check if dealer beats, pushes or loses
+    // Make sure to ignore all valx > 21 (those who busted)
+    // Update hands lost / hands won
+    // Call NewHand
+}
+
 function UpdateUserTurn(){
-    // Increment, if no user, dealers turn, in which case do dealer, calc results, execute NewHand()
+    // Increment, if no user, dealers turn, in which case to dealer, calc results
 }
 
 function ResetEntireDatabase(){
-    // Reset DB to default (call delete methods in proper order)
+    // Add some sort of authentication here
+    DBTruncateAllTables();
 }
 
 ?>

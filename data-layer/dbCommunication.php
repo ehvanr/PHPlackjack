@@ -369,6 +369,26 @@ function DBUpdateGameDeck($GameID, $NewDeck){
     }
 }
 
+// FINISHED
+function DBUpdateDeckPointer($GameID, $DeckPointer){
+    $sql = "UPDATE Games SET DeckPointer = ? WHERE GameID = ?";
+    $param_type_array = array("ii");
+    $param_array = array($DeckPointer, $GameID);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_UPDATE);
+
+    switch($return){
+        case SUCCESS:
+        case NOTHING_AFFECTED:
+            return SUCCESS;
+            break;
+        case FAILURE:
+            return FAILURE;
+        default:
+            return FAILURE;
+            break;
+    }
+}
+
 // I wanna cry
 // SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE ID = ?;
 
@@ -499,6 +519,21 @@ function DBGetGameUsers($GameID, $UserStatus){
 }
 
 // FINISHED
+function DBGetUserHand($GameID, $Username){
+    $sql = "SELECT UserHand FROM GameUsers WHERE GameID = ? AND Username = ?";
+    $param_type_array = array("is");
+    $param_array = array($GameID, $Username);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
+
+    if($return === FAILURE){
+        return FAILURE;
+    }else{
+        $user_hand = json_decode($return)[0]->UserHand;
+        return $user_hand;
+    }
+}
+
+// FINISHED
 function DBUpdateUserHand($GameID, $Username, $UserHand){
     $sql = "UPDATE GameUsers SET UserHand= ? WHERE GameID = ? AND Username = ?";
     $param_type_array = array("sis");
@@ -592,6 +627,18 @@ function DBGetLeaderboard(){
         $decoded_json = json_decode($return);
         return $decoded_json;
     }
+}
+
+// FINISHED
+function DBTruncateAllTables(){
+    GenericSQL("SET FOREIGN_KEY_CHECKS = 0", NULL, NULL, SQL_DELETE);
+    GenericSQL("TRUNCATE TABLE GameUsers", NULL, NULL, SQL_DELETE);
+    GenericSQL("TRUNCATE TABLE ChatHistory", NULL, NULL, SQL_DELETE);
+    GenericSQL("TRUNCATE TABLE Leaderboard", NULL, NULL, SQL_DELETE);
+    GenericSQL("TRUNCATE TABLE Games", NULL, NULL, SQL_DELETE);
+    GenericSQL("TRUNCATE TABLE Users", NULL, NULL, SQL_DELETE);
+    GenericSQL("TRUNCATE TABLE GameUsers", NULL, NULL, SQL_DELETE);
+    GenericSQL("SET FOREIGN_KEY_CHECKS = 1", NULL, NULL, SQL_DELETE);
 }
 
 ?>
