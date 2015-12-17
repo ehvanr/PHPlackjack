@@ -12,6 +12,7 @@ CREATE TABLE `Games` (
   `GameID` int(12) NOT NULL AUTO_INCREMENT,
   `GameName` varchar(255) NOT NULL,
   `DealerHand` varchar(255) DEFAULT NULL,
+  `DeckPointer` int(12) DEFAULT NULL,
   `CurrentDeck` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`GameID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

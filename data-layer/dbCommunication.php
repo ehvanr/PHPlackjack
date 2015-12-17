@@ -246,8 +246,8 @@ function DBGetMessages($MessageID){
 // FINISHED
 function DBCreateGame($GameName){
     $sql = "INSERT INTO Games (GameName) VALUES (?)";
-    $param_type_array = array("ss");
-    $param_array = array($GameName, $Status);
+    $param_type_array = array("s");
+    $param_array = array($GameName);
     $return = GenericSQL($sql, $param_type_array, $param_array, SQL_INSERT);
 
     switch($return){
@@ -351,7 +351,7 @@ function DBRemoveUserFromGame($GameID, $Username){
 
 // FINISHED
 function DBUpdateGameDeck($GameID, $NewDeck){
-    $sql = "UPDATE Games SET CurrentDeck = ? WHERE GameID = ?";
+    $sql = "UPDATE Games SET CurrentDeck = ?, DeckPointer = 0 WHERE GameID = ?";
     $param_type_array = array("si");
     $param_array = array($NewDeck, $GameID);
     $return = GenericSQL($sql, $param_type_array, $param_array, SQL_UPDATE);
@@ -370,8 +370,8 @@ function DBUpdateGameDeck($GameID, $NewDeck){
 }
 
 // FINISHED
-function DBGetNumUsersInGame($GameID){
-    $sql = "SELECT COUNT(*) AS Count FROM GameUsers WHERE GameID = ?";
+function DBGetGameDeck($GameID){
+    $sql = "SELECT CurrentDeck, DeckPointer FROM Games WHERE GameID = ?";
     $param_type_array = array("i");
     $param_array = array($GameID);
     $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
@@ -379,8 +379,78 @@ function DBGetNumUsersInGame($GameID){
     if($return === FAILURE){
         return FAILURE;
     }else{
-        $num_users_in_game = json_decode($return)[0]->Count;
-        return $num_users_in_game;
+        $current_deck = json_decode($return);
+        return $current_deck;
+    }
+}
+
+// FINISHED
+function DBGetDealerHand($GameID){
+    $sql = "SELECT DealerHand FROM Games WHERE GameID = ?";
+    $param_type_array = array("i");
+    $param_array = array($GameID);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
+
+    if($return === FAILURE){
+        return FAILURE;
+    }else{
+        $dealer_hand = json_decode($return)[0]->DealerHand;
+        return $dealer_hand;
+    }
+}
+
+// FINISHED
+function DBUpdateDealerHand($GameID, $DealerHand){
+    $sql = "UPDATE Games SET DealerHand= ? WHERE GameID = ?";
+    $param_type_array = array("si");
+    $param_array = array($DealerHand, $GameID);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_UPDATE);
+
+    switch($return){
+        case SUCCESS:
+        case NOTHING_AFFECTED:
+            return SUCCESS;
+            break;
+        case FAILURE:
+            return FAILURE;
+        default:
+            return FAILURE;
+            break;
+    }
+}
+
+// FINISHED
+function DBGetGameUsers($GameID){
+    $sql = "SELECT * FROM GameUsers WHERE GameID = ?";
+    $param_type_array = array("i");
+    $param_array = array($GameID);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
+
+    if($return === FAILURE){
+        return FAILURE;
+    }else{
+        $game_users = json_decode($return);
+        return $game_users;
+    }
+}
+
+// FINISHED
+function DBUpdateUserHand($GameID, $Username, $UserHand){
+    $sql = "UPDATE GameUsers SET UserHand= ? WHERE GameID = ? AND Username = ?";
+    $param_type_array = array("sis");
+    $param_array = array($UserHand, $GameID, $Username);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_UPDATE);
+
+    switch($return){
+        case SUCCESS:
+        case NOTHING_AFFECTED:
+            return SUCCESS;
+            break;
+        case FAILURE:
+            return FAILURE;
+        default:
+            return FAILURE;
+            break;
     }
 }
 

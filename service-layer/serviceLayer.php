@@ -90,7 +90,7 @@ function IsAuthorized(){
 
 function ShuffleDeck($GameID){
     $OrderedDeckString = "1S2S3S4S5S6S7S8S9S0SJSQSKS1H2H3H4H5H6H7H8H9H0HJHQHKH1D2D3D4D5D6D7D8D9D0DJDQDKD1C2C3C4C5C6C7C8C9C0CJCQCKC";
-    $OrderedDeckArr = str_split($OrderedDeck, 2);
+    $OrderedDeckArr = str_split($OrderedDeckString, 2);
     shuffle($OrderedDeckArr);
     $ShuffledDeckString = implode($OrderedDeckArr);
 
@@ -114,6 +114,37 @@ function CreateGame($GameName, $Username){
     DBUpdateUserGameStatus($GameID, $Username, "ACTIVE");
 
     // DEAL OUT
+    // Get number of players + dealer
+    $GameUsers = DBGetGameUsers($GameID);
+    $DealerHand = DBGetDealerHand($GameID);
+    $Deck = DBGetGameDeck($GameID);
+    $DeckPointer = $Deck[0]->DeckPointer;
+
+    // Loop twice (two cards deal out)
+    for($i = 0; $i < 2; $i++){
+        // Deal out to dealer
+        $DealerHand .= $DeckPointer;
+        $DeckPointer++;
+
+        foreach($GameUsers as $User){
+            $User->UserHand .= $DeckPointer;
+            $DeckPointer++;
+        }
+    }
+
+    // Update DB with UserHands and DealerHand
+    foreach($GameUsers as $User){
+        $Username = $User->Username;
+        $UserHand = $User->UserHand;
+        DBUpdateUserHand($GameID, $Username, $UserHand);
+    }
+
+    DBUpdateDealerHand($GameID, $DealerHand);
+
+    echo "UserHand: " . $GameUsers[0]->UserHand;
+    echo "\nDealerHand: " . $DealerHand . "\n";
+
+    // Update User Board with the appropriate card mappings
 }
 
 function NewHand($GameID){
@@ -143,12 +174,5 @@ function UpdateBoard($Username, $GameID){
 function CheckIn($GameID){
     
 }
-
-
-
-//  Users in game, board layout
-//
-//  1S2S3S4S5S6S7S8S9S0SJSQSKSAS
-//  1H2H3H4H5H6H7H8H9H0HJHQHKHAH
 
 ?>
