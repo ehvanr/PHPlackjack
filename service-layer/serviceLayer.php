@@ -254,8 +254,11 @@ function HitPlayer($Username){
     $UserHand .= $ZeroPadCard;
     $DeckPointer++;
 
+    // Update the UserHand and DeckPointer
     DBUpdateUserHand($GameID, $Username, $UserHand);
+    DBUpdateDeckPointer($GameID, $DeckPointer);
     
+    CheckIfBust();
     // Update DB with new card
     // Determine of bust
     //   If so IncremenetHandsLost(UserID)
@@ -271,10 +274,63 @@ function StayPlayer(){
     UpdateUserTurn();
 }
 
+// Refactor some of this code to a generic value detector
 function CheckIfBust(){
-    $UserHand = DBGetUserHand($GameID, $Username);
-    var_dump($UserHand);
-    // If bust, Update UserTurn, update HandsLost
+    $Username = $_SESSION["Username"];
+    $GameID= $_SESSION["GameID"];
+    $CurrentDeckString = DBGetGameDeck($GameID)[0]->CurrentDeck;
+    $CardIndexStr = DBGetUserHand($GameID, $Username);
+    $CurrentDeckArr = str_split($CurrentDeckString, 2);
+    $CardIndexArr = str_split($CardIndexStr, 2);
+
+    // Cumulative point value of the cards
+    $Cumulative = 0;
+
+    // How many aces do we have? (Detriment as we fake bust)
+    $NumAce = 0;
+
+    echo $Username . " Cards: ";
+    foreach($CardIndexArr as $CardIndex){
+        // convert to int
+        $UnpaddedCardIndex = intval($CardIndex);
+        $CurrentCard = $CurrentDeckArr[$UnpaddedCardIndex];
+        $CardVal = $CurrentCard[0];
+
+        switch($CardVal){
+            case '0':
+                $Cumulative += 11;
+                $NumAce++;
+                break;
+            case 'K':
+            case 'Q':
+            case 'J':
+                $Cumulative += 10;
+                break;
+            default:
+                $Cumulative += intval($CardVal);
+        }
+
+        echo $CurrentCard . " ";
+    }
+
+    // Determine Bust
+    if($Cumulative > 21){
+        for($NumAce; $NumAce > 0; $NumAce--){
+            $Cumulative -= 10;
+            if($Cumulative <= 21){
+                break;
+            }
+        }
+    }
+
+    if($Cumulative > 21){
+        // If bust, Update UserTurn, update HandsLost
+        echo "\nBUST";
+        return true;
+    }
+    echo "\nTotal Value: " . $Cumulative . "\n";
+
+    return false;
 }
 
 function DealerPlay(){
