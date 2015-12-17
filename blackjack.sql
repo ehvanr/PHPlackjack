@@ -31,6 +31,7 @@ CREATE TABLE `GameUsers` (
   `Username` varchar(255) NOT NULL,
   `UserStatus` varchar(255) NOT NULL,
   `UserHand` varchar(255) NOT NULL,
+  `FoldedLast` BOOLEAN NOT NULL DEFAULT 0,
   PRIMARY KEY (`GameID`,`Username`),
   KEY `Username` (`Username`),
   CONSTRAINT `gameusers_ibfk_1` FOREIGN KEY (`GameID`) REFERENCES `Games` (`GameID`),

@@ -55,7 +55,7 @@ function UserLogin($Username, $Password){
         $_SESSION["Username"] = $Username;
 
         // Store in DB
-        DBSetToken($Username, $NewToken);
+        DBUpdateToken($Username, $NewToken);
 
         return array(SUCCESS, "Successfully logged user in."); 
     }elseif($return_status === LOGIN_FAILED){
@@ -117,7 +117,7 @@ function CreateGame($GameName, $Username){
     DBAddUserToGame($GameID, $Username);
 
     // User is added, now update user to ACTIVE (First user, goes first)
-    DBUpdateUserGameStatus($GameID, $Username, "ACTIVE");
+    DBUpdateGameUserStatus($GameID, $Username, "ACTIVE");
 
     // DEAL OUT
     // Get number of players + dealer
@@ -215,7 +215,7 @@ function NewHand($GameID){
 
     foreach($WaitingGameUsers as $User){
         $Username = $User->Username;
-        DBUpdateUserGameStatus($GameID, $Username, "ACTIVE");
+        DBUpdateGameUserStatus($GameID, $Username, "ACTIVE");
     }
 
     foreach($LeftGameUsers as $User){
@@ -281,10 +281,9 @@ function StayPlayer(){
     UpdateUserTurn();
 }
 
-// Refactor some of this code to a generic value detector
 function CheckIfBust(){
     $Username = $_SESSION["Username"];
-    $GameID= $_SESSION["GameID"];
+    $GameID = $_SESSION["GameID"];
     $CurrentDeckString = DBGetGameDeck($GameID)[0]->CurrentDeck;
     $CardIndexStr = DBGetUserHand($GameID, $Username);
     $CurrentDeckArr = str_split($CurrentDeckString, 2);
@@ -293,22 +292,7 @@ function CheckIfBust(){
     // Cumulative point value of the cards
     $Cumulative = 0;
 
-    // How many aces do we have? (Detriment as we fake bust)
-    $NumAce = 0;
-
-    $HandInformation = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
-    $Cumulative = $HandInformation[0];
-    $NumAce = $HandInformation[1];
-
-    // Determine Bust
-    if($Cumulative > 21){
-        for($NumAce; $NumAce > 0; $NumAce--){
-            $Cumulative -= 10;
-            if($Cumulative <= 21){
-                break;
-            }
-        }
-    }
+    $Cumulative = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
 
     if($Cumulative > 21){
         // If bust, Update UserTurn, update HandsLost
@@ -349,7 +333,16 @@ function DetermineHandValue($CardIndexArr, $CurrentDeckArr){
         }
     }
 
-    return array($Cumulative, $NumAce);
+    if($Cumulative > 21){
+        for($NumAce; $NumAce > 0; $NumAce--){
+            $Cumulative -= 10;
+            if($Cumulative <= 21){
+                break;
+            }
+        }
+    }
+
+    return $Cumulative;
 }
 
 function DealerHit(){
@@ -360,7 +353,7 @@ function DealerPlay(){
     // Dealer play rules
     // Hit if < 17, stay on 17+
 
-    $GameID= $_SESSION["GameID"];
+    $GameID = $_SESSION["GameID"];
 
     while(true){
         $Deck = DBGetGameDeck($GameID)[0];
@@ -371,19 +364,7 @@ function DealerPlay(){
         $CurrentDeckArr = str_split($CurrentDeckString, 2);
         $CardIndexArr = str_split($CardIndexStr, 2);
 
-        $HandInformation = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
-        $Cumulative = $HandInformation[0];
-        $NumAce = $HandInformation[1];
-
-        // Deduct any Aces if we exceed 21
-        if($Cumulative > 21){
-            for($NumAce; $NumAce > 0; $NumAce--){
-                $Cumulative -= 10;
-                if($Cumulative <= 21){
-                    break;
-                }
-            }
-        }
+        $Cumulative = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
 
         if($Cumulative < 17){
             // Hit
@@ -396,11 +377,9 @@ function DealerPlay(){
             DBUpdateDeckPointer($GameID, $DeckPointer);
         }if($Cumulative >= 17){
             // Either stay or bust
-            $HandInformation = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
-            $Cumulative = $HandInformation[0];
-            $NumAce = $HandInformation[1];
+            $Cumulative = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
 
-            echo "DEALERS HAND: " . $Cumulative . "\nNumAces: " . $NumAce . "\n";
+            echo "DEALERS HAND: " . $Cumulative . "\n";
             CheckWinners();
             break;
         }
@@ -413,8 +392,42 @@ function CheckWinners(){
     // Update hands lost / hands won
     // Call NewHand
     
-    // output dealer hand
-    
+    $GameID = $_SESSION["GameID"];
+    $GameUsers = DBGetGameUsers($GameID, "ACTIVE");
+
+    $CurrentDeckString = DBGetGameDeck($GameID)[0]->CurrentDeck;
+    $CurrentDeckArr = str_split($CurrentDeckString, 2);
+
+    $DealerCardIndexStr = DBGetDealerHand($GameID);
+    $DealerCardIndexArr = str_split($DealerCardIndexStr, 2);
+    $DealerCumulative = DetermineHandValue($DealerCardIndexArr, $CurrentDeckArr);
+
+    foreach($GameUsers as $User){
+        $CurrentUsername = $User->Username;
+        $CardIndexStr = DBGetUserHand($GameID, $CurrentUsername);
+        $CardIndexArr = str_split($CardIndexStr, 2);
+
+        $UserCumulative = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
+        
+        if($UserFolded){
+            // User folded. No loss or win.
+            // Reset fold status
+        }elseif($UserCumulative > 21){
+            // User Loses, Loss Increment Happened on Bust
+        }elseif($DealerCumulative > 21){
+            // User Wins
+            DBIncrementHandsWon($CurrentUsername);
+        }elseif($UserCumulative > $DealerCumulative){
+            // User Wins
+            DBIncrementHandsWon($CurrentUsername);
+        }elseif($UserCumulative < $DealerCumulative){
+            // User Loses
+            DBIncrementHandsLost($CurrentUsername);
+        }elseif($UserCumulative === $DealerCumulative){
+            // Push
+        }
+    }
+
 }
 
 function UpdateUserTurn(){
@@ -422,8 +435,8 @@ function UpdateUserTurn(){
     $Username = $_SESSION["Username"];
     $GameID = $_SESSION["GameID"];
 
-    $Index = DBGetUserGameIndex($Username, $GameID);
-    $NextPlayer = DBGetUserGameUsernameByIndex($Index + 1, $GameID);
+    $Index = DBGetGameUserIndex($Username, $GameID);
+    $NextPlayer = DBGetGameUserUsernameByIndex($Index + 1, $GameID);
 
     // If NextPlayer is null, its the dealers turn
     if($NextPlayer === DEALERS_TURN){

@@ -155,7 +155,7 @@ function DBUserLogin($Username, $Password){
 }
 
 // FINISHED
-function DBSetToken($Username, $Token){
+function DBUpdateToken($Username, $Token){
     $sql = "UPDATE Users SET Token = ? WHERE Username = ?";
     $param_type_array = array("ss");
     $param_array = array($Token, $Username);
@@ -310,7 +310,7 @@ function DBGetGames(){
 }
 
 // FINISHED
-function DBUpdateUserGameStatus($GameID, $Username, $StatusUpdate){
+function DBUpdateGameUserStatus($GameID, $Username, $StatusUpdate){
     $sql = "UPDATE GameUsers SET UserStatus = ? WHERE GameID = ? AND Username = ?";
     $param_type_array = array("sis");
     $param_array = array($StatusUpdate, $GameID, $Username);
@@ -392,7 +392,7 @@ function DBUpdateDeckPointer($GameID, $DeckPointer){
 // I wanna cry
 // SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE ID = ?;
 
-function DBGetUserGameIndex($Username, $GameID){
+function DBGetGameUserIndex($Username, $GameID){
     $sql = "SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE Username = ? AND GameID = ?";
     $param_type_array = array("si");
     $param_array = array($Username, $GameID);
@@ -406,7 +406,7 @@ function DBGetUserGameIndex($Username, $GameID){
     }
 }
 
-function DBGetUserGameUsernameByIndex($Index, $GameID){
+function DBGetGameUserUsernameByIndex($Index, $GameID){
     $sql = "SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE ID = ? AND GameID = ?";
     $param_type_array = array("ii");
     $param_array = array($Index, $GameID);
@@ -629,6 +629,14 @@ function DBGetLeaderboard(){
         $decoded_json = json_decode($return);
         return $decoded_json;
     }
+}
+
+function DBUpdateFoldedValue(){
+    
+}
+
+function DBGetFoldedValue(){
+    
 }
 
 // FINISHED
