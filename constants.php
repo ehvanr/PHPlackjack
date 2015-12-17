@@ -3,6 +3,9 @@
 // SUCCESS CODES
 define("SUCCESS", 1000);
 
+// INFO CODES
+define("DEALERS_TURN", 3000);
+
 // WARNING CODES
 define("NOTHING_AFFECTED", 4000);
 define("EMPTY_SELECT", 4001);

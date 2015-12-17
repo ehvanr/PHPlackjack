@@ -414,13 +414,15 @@ function DBGetUserGameUsernameByIndex($Index, $GameID){
 
     if($return === FAILURE){
         return FAILURE;
+    }elseif($return === NULL){
+        return DEALERS_TURN; 
     }else{
         $Username = json_decode($return)[0]->Username;
         return $Username;
     }
 }
 
-function DBSetUserTurn($Username, $GameID){
+function DBUpdateUserTurn($Username, $GameID){
     $sql = "UPDATE Games SET UserTurn = ? WHERE GameID = ?";
     $param_type_array = array("si");
     $param_array = array($Username, $GameID);

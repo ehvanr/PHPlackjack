@@ -28,7 +28,10 @@ function CreateUser($Username, $Password){
 
     $return_status = DBCreateUser($Username, $HashSaltedPassword);
 
+
     if($return_status === SUCCESS){
+        // Add to Leaderboard with no stats
+        DBAddUserToLeaderboard($Username);
         return array(SUCCESS, "Successfully created user."); 
     }elseif($return_status === USERNAME_ALREADY_EXISTS){
         return array(FAILURE, "Username already exists."); 
@@ -149,9 +152,9 @@ function CreateGame($GameName, $Username){
     // Update DeckPointer
     DBUpdateDeckPointer($GameID, $DeckPointer);
 
-    // Set UserTurn in Games to Username
+    // Update UserTurn in Games to Username
     $Username = $_SESSION["Username"];
-    DBSetUserTurn($Username, $GameID);
+    DBUpdateUserTurn($Username, $GameID);
 
     // Update User Board with the appropriate card mappings
     UpdateBoard();
@@ -290,6 +293,39 @@ function CheckIfBust(){
     $NumAce = 0;
 
     echo $Username . " Cards: ";
+    $HandInformation = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
+    $Cumulative = $HandInformation[0];
+    $NumAce = $HandInformation[1];
+
+    // Determine Bust
+    if($Cumulative > 21){
+        for($NumAce; $NumAce > 0; $NumAce--){
+            $Cumulative -= 10;
+            if($Cumulative <= 21){
+                break;
+            }
+        }
+    }
+
+    if($Cumulative > 21){
+        // If bust, Update UserTurn, update HandsLost
+        DBIncrementHandsLost($Username);
+        UpdateUserTurn();
+        echo "\nBUST";
+        return true;
+    }
+    echo "\nTotal Value: " . $Cumulative . "\n";
+
+    return false;
+}
+
+function DetermineHandValue($CardIndexArr, $CurrentDeckArr){
+    // Cumulative point value of the cards
+    $Cumulative = 0;
+
+    // How many aces do we have? (Detriment as we fake bust)
+    $NumAce = 0;
+
     foreach($CardIndexArr as $CardIndex){
         // convert to int
         $UnpaddedCardIndex = intval($CardIndex);
@@ -313,6 +349,24 @@ function CheckIfBust(){
         echo $CurrentCard . " ";
     }
 
+    return array($Cumulative, $NumAce);
+}
+
+function DealerPlay(){
+    // Dealer play rules
+    // Hit if < 17, stay on 17+
+
+    $GameID= $_SESSION["GameID"];
+    $CurrentDeckString = DBGetGameDeck($GameID)[0]->CurrentDeck;
+    $CardIndexStr = DBGetDealerHand($GameID);
+    $CurrentDeckArr = str_split($CurrentDeckString, 2);
+    $CardIndexArr = str_split($CardIndexStr, 2);
+
+    echo $Username . " Cards: ";
+    $HandInformation = DetermineHandValue($CardIndexArr, $CurrentDeckArr);
+    $Cumulative = $HandInformation[0];
+    $NumAce = $HandInformation[1];
+
     // Determine Bust
     if($Cumulative > 21){
         for($NumAce; $NumAce > 0; $NumAce--){
@@ -325,17 +379,16 @@ function CheckIfBust(){
 
     if($Cumulative > 21){
         // If bust, Update UserTurn, update HandsLost
+        DBIncrementHandsLost($Username);
+        UpdateUserTurn();
         echo "\nBUST";
         return true;
     }
     echo "\nTotal Value: " . $Cumulative . "\n";
 
     return false;
-}
 
-function DealerPlay(){
-    // Dealer play rules
-    // Hit if < 17, stay on 17+
+    CheckWinners();
 }
 
 function CheckWinners(){
@@ -347,6 +400,22 @@ function CheckWinners(){
 
 function UpdateUserTurn(){
     // Increment, if no user, dealers turn, in which case to dealer, calc results
+    $Username = $_SESSION["Username"];
+    $GameID = $_SESSION["GameID"];
+
+    $Index = DBGetUserGameIndex($Username, $GameID);
+    $NextPlayer = DBGetUserGameUsernameByIndex($Index + 1, $GameID);
+
+    // If NextPlayer is null, its the dealers turn
+    if($NextPlayer === DEALERS_TURN){
+        // Dealer Turn
+        DBUpdateUserTurn(NULL, $GameID);
+        // Trigger dealer turn
+        //DealerPlay();
+    }else{
+        DBUpdateUserTurn($NextPlayer, $GameID);
+    }
+
 }
 
 function ResetEntireDatabase(){
