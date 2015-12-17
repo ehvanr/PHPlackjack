@@ -5,6 +5,7 @@ define("SUCCESS", 1000);
 
 // INFO CODES
 define("DEALERS_TURN", 3000);
+define("FIRST_PLAYER", 3001);
 
 // WARNING CODES
 define("NOTHING_AFFECTED", 4000);

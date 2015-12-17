@@ -1,6 +1,7 @@
 <?php
 
-require "./dbConnection.inc";
+require_once($_SERVER['DOCUMENT_ROOT']."/dbConnection.inc");
+require_once($_SERVER['DOCUMENT_ROOT']."/constants.php");
 
 function passByReference($arr){
     
@@ -238,8 +239,7 @@ function DBGetMessages($MessageID){
     if($return === FAILURE){
         return FAILURE;
     }else{
-        $decoded_json = json_decode($return);
-        return $decoded_json;
+        return $return;
     }
 }
 
@@ -304,8 +304,7 @@ function DBGetGames(){
     if($return === FAILURE){
         return FAILURE;
     }else{
-        $decoded_json = json_decode($return);
-        return $decoded_json;
+        return $return;
     }
 }
 
@@ -393,9 +392,9 @@ function DBUpdateDeckPointer($GameID, $DeckPointer){
 // SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE ID = ?;
 
 function DBGetGameUserIndex($Username, $GameID){
-    $sql = "SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE Username = ? AND GameID = ?";
-    $param_type_array = array("si");
-    $param_array = array($Username, $GameID);
+    $sql = "SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T WHERE GameID = ?) A WHERE Username = ? AND GameID = ?";
+    $param_type_array = array("isi");
+    $param_array = array($GameID, $Username, $GameID);
     $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
 
     if($return === FAILURE){
@@ -407,9 +406,9 @@ function DBGetGameUserIndex($Username, $GameID){
 }
 
 function DBGetGameUserUsernameByIndex($Index, $GameID){
-    $sql = "SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T) A WHERE ID = ? AND GameID = ?";
-    $param_type_array = array("ii");
-    $param_array = array($Index, $GameID);
+    $sql = "SELECT * FROM (SELECT @row_number:=@row_number+1 'ID', GameUsers.* FROM GameUsers, (SELECT @row_number:=0) AS T WHERE GameID = ?) A WHERE ID = ? AND GameID = ?";
+    $param_type_array = array("iii");
+    $param_array = array($GameID, $Index, $GameID);
     $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
 
     if($return === FAILURE){
@@ -449,6 +448,8 @@ function DBGetUserTurn($GameID){
 
     if($return === FAILURE){
         return FAILURE;
+    }if($return === NULL){
+        return FIRST_PLAYER;
     }else{
         $user_turn = json_decode($return)[0]->UserTurn;
         return $user_turn;
@@ -626,17 +627,41 @@ function DBGetLeaderboard(){
     }elseif($return === NULL){
         return EMPTY_SELECT;
     }else{
-        $decoded_json = json_decode($return);
-        return $decoded_json;
+        return $return;
     }
 }
 
-function DBUpdateFoldedValue(){
-    
+function DBUpdateFoldedValue($Username, $GameID, $FoldedLast){
+    $sql = "UPDATE GameUsers SET FoldedLast = ? WHERE GameID = ? AND Username = ?";
+    $param_type_array = array("iis");
+    $param_array = array($FoldedLast, $GameID, $Username);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_UPDATE);
+
+    switch($return){
+        case SUCCESS:
+        case NOTHING_AFFECTED:
+            return SUCCESS;
+            break;
+        case FAILURE:
+            return FAILURE;
+        default:
+            return FAILURE;
+            break;
+    }
 }
 
-function DBGetFoldedValue(){
-    
+function DBGetFoldedValue($Username, $GameID){
+    $sql = "SELECT FoldedLast FROM GameUsers WHERE GameID = ? AND Username = ?";
+    $param_type_array = array("is");
+    $param_array = array($GameID, $Username);
+    $return = GenericSQL($sql, $param_type_array, $param_array, SQL_SELECT);
+
+    if($return === FAILURE){
+        return FAILURE;
+    }else{
+        $folded_last = json_decode($return)[0]->FoldedLast;
+        return $folded_last;
+    }
 }
 
 // FINISHED
